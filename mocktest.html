@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz Test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css">
+  <style>
+   /* Basic page styling */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background-color: #f4f4f4;
+  padding-bottom: 80px; /* Leave space for fixed button bar */
+}
+
+/* Header bar styling */
+header {
+  background-color: #e7e7e7;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.top-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.menu-icon {
+  display: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .menu-icon {
+    display: block;
+    order: 2;
+  }
+
+  .top-bar span {
+    order: 1;
+  }
+
+  .top-bar button {
+    order: 3;
+  }
+}
+
+/* Main quiz layout */
+.quiz-container {
+  display: flex;
+  padding: 20px;
+  flex-direction: row;
+}
+
+.question-section {
+  flex: 3;
+  background: #fff;
+  padding: 20px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin-right: 20px;
+}
+
+.question-number {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.options label {
+  display: block;
+  margin: 10px 0;
+}
+
+/* Sidebar for question numbers */
+.sidebar {
+  flex: 1;
+  background: #e7f0fa;
+  padding: 20px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.sidebar h3 {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.sidebar .question-buttons {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.sidebar .question-buttons button {
+  padding: 8px;
+  border: 2px solid #000;
+  background-color: #fff;
+  border-radius: 0;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sidebar .question-buttons button.active {
+  border-color: #000;
+  border-radius: 20px;
+}
+
+.sidebar .question-buttons button.answered {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.sidebar .question-buttons button.unanswered {
+  background-color: #f44336;
+  color: white;
+}
+
+.sidebar .question-buttons button.review {
+  background-color: #6a1b9a;
+  color: white;
+}
+
+/* Hidden by default, only current question visible */
+.question-box {
+  display: none;
+}
+
+.question-box.active {
+  display: block;
+}
+
+#result {
+  display: none;
+  background: #fff;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+/* Fixed Bottom Action Bar */
+.bottom-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #f1f1f1;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: center;
+  z-index: 1000;
+  border-top: 1px solid #ccc;
+}
+
+.bottom-action-bar .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+}
+
+.bottom-action-bar .buttons button {
+  padding: 12px 20px;
+  height: 45px;
+  border: none;
+  background-color: #5bc0de;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  flex: 1 1 auto;
+  min-width: 120px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.bottom-action-bar .buttons button:hover {
+  background-color: #31b0d5;
+}
+
+/* Responsive layout changes */
+@media (max-width: 768px) {
+  .quiz-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .sidebar.open {
+    display: block;
+    order: -1;
+    margin-bottom: 20px;
+  }
+
+  .question-section {
+    margin-right: 0;
+  }
+}
+
+
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Delhi Police MTS: (Mixed) Mini Live Test</h1>
+    <div class="top-bar">
+      <span><strong>Time Left:</strong> 00:44:54</span>
+      <button id="fullscreen-toggle">Switch Full Screen</button>
+	  <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+	  <select id="language-switch" onchange="switchLanguage()" style="padding: 5px;">
+  <option value="en">English</option>
+  <option value="hi">हिन्दी</option>
+</select>
+    </div>
+  </header>
+  <!-- ✅ Fixed Bottom Action Buttons -->
+<div class="bottom-action-bar">
+  <div class="buttons">
+    <button onclick="previousQuestion()">Previous</button>
+    <button onclick="markForReview()">Mark for Review & Next</button>
+    <button onclick="clearResponse()">Clear Response</button>
+    <button onclick="saveAndNext()">Save & Next</button>
+	<button onclick="submitTest()">Submit Test</button>
+  </div>
+</div>
+
+  <div class="quiz-container">
+    <!-- Left Section: Question and navigation buttons -->
+    <div class="question-section">
+      <div id="questions-container">
+        <!-- You will insert your question boxes here -->
+		
+		<div class="question-box active" id="q1">
+          <div class="question-number">Question No. 1</div>
+          <p>Three of the following four words are alike in a certain way and one is different. Pick the odd word out.</p>
+          <div class="options">
+            <label><input type="radio" name="q1"> Blueberry</label>
+            <label><input type="radio" name="q1"> Baneberry</label>
+            <label><input type="radio" name="q1"> Strawberry</label>
+            <label><input type="radio" name="q1"> Gooseberry</label>
+          </div>
+        </div>
+
+        <div class="question-box" id="q2">
+          <div class="question-number">Question No. 2</div>
+          <p class="question-text" data-en="Which number is the odd one out?" data-hi="इनमें से अलग संख्या कौन सी है?" >Which number is the odd one out?</p>
+          <div class="options">
+            <label data-en="2" data-hi="२"><input type="radio" name="q2"> 2</label>
+    <label data-en="4" data-hi="४"><input type="radio" name="q2"> 4</label>
+    <label data-en="6" data-hi="६"><input type="radio" name="q2"> 6</label>
+    <label data-en="9" data-hi="९"><input type="radio" name="q2"> 9</label>
+          </div>
+        </div>
+
+        <div class="question-box" id="q3">
+          <div class="question-number">Question No. 3</div>
+          <p>Find the next number in the sequence: 2, 4, 8, 16, ?</p>
+          <div class="options">
+            <label><input type="radio" name="q3"> 18</label>
+            <label><input type="radio" name="q3"> 24</label>
+            <label><input type="radio" name="q3"> 32</label>
+            <label><input type="radio" name="q3"> 36</label>
+          </div>
+        </div>
+		
+      </div>
+
+      <div id="result"></div>
+
+     
+      
+	  
+	  
+    </div>
+
+    <!-- Right Section: Sidebar with question navigation -->
+    <div class="sidebar">
+      <div>
+        <h3>SECTION: General Intelligence and Reasoning</h3>
+        <div class="question-buttons" id="question-buttons"></div>
+        <div class="buttons">
+          <button>Question Paper</button>
+          <button>Instructions</button>
+        </div>
+      </div>
+      
+      
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  const totalQuestions = 3;
+  const questionButtonsContainer = document.getElementById('question-buttons');
+  const questionBoxes = document.querySelectorAll('.question-box');
+  let userAnswers = {};
+  let currentQuestion = 1;
+
+  // TIMER START
+  let totalTimeInSeconds = (2 * 60) + 54;
+  const timeDisplay = document.querySelector('.top-bar span');
+
+  function updateTimer() {
+    let minutes = Math.floor(totalTimeInSeconds / 60);
+    let seconds = totalTimeInSeconds % 60;
+    timeDisplay.textContent = `Time Left: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    if (totalTimeInSeconds <= 0) {
+      clearInterval(timerInterval);
+      submitTest();
+    } else {
+      totalTimeInSeconds--;
+    }
+  }
+
+  const timerInterval = setInterval(updateTimer, 1000);
+  updateTimer();
+  // TIMER END
+
+  // Navigation buttons
+  for (let i = 1; i <= totalQuestions; i++) {
+    const btn = document.createElement('button');
+    btn.innerText = i;
+    btn.id = `btn${i}`;
+    btn.onclick = () => showQuestion(i);
+    if (i === 1) btn.classList.add('active');
+    questionButtonsContainer.appendChild(btn);
+  }
+
+  function showQuestion(index) {
+    currentQuestion = index;
+    questionBoxes.forEach(q => q.classList.remove('active'));
+    document.getElementById(`q${index}`).classList.add('active');
+
+    document.querySelectorAll('#question-buttons button').forEach((b, i) => {
+      b.classList.toggle('active', i + 1 === index);
+    });
+  }
+
+  function previousQuestion() {
+    if (currentQuestion > 1) {
+      showQuestion(currentQuestion - 1);
+    }
+  }
+
+  function saveAndNext() {
+    const options = document.getElementsByName(`q${currentQuestion}`);
+    let attempted = false;
+
+    for (const option of options) {
+      if (option.checked) {
+        userAnswers[`q${currentQuestion}`] = option.parentElement.textContent.trim();
+        attempted = true;
+        break;
+      }
+    }
+
+    const btn = document.getElementById(`btn${currentQuestion}`);
+    btn.classList.remove('review', 'answered', 'unanswered');
+    btn.classList.add(attempted ? 'answered' : 'unanswered');
+
+    if (currentQuestion < totalQuestions) {
+      showQuestion(currentQuestion + 1);
+    }
+  }
+
+  function markForReview() {
+    const options = document.getElementsByName(`q${currentQuestion}`);
+    for (const option of options) {
+      if (option.checked) {
+        userAnswers[`q${currentQuestion}`] = option.parentElement.textContent.trim();
+        break;
+      }
+    }
+    const btn = document.getElementById(`btn${currentQuestion}`);
+    btn.classList.remove('answered', 'unanswered');
+    btn.classList.add('review');
+    if (currentQuestion < totalQuestions) {
+      showQuestion(currentQuestion + 1);
+    }
+  }
+
+  function clearResponse() {
+    const options = document.getElementsByName(`q${currentQuestion}`);
+    for (const option of options) {
+      option.checked = false;
+    }
+    delete userAnswers[`q${currentQuestion}`];
+    const btn = document.getElementById(`btn${currentQuestion}`);
+    btn.classList.remove('answered', 'unanswered', 'review');
+  }
+
+  function submitTest() {
+    clearInterval(timerInterval);
+	saveAndNext(); // Save the last question if unanswered
+
+    const correctAnswers = {
+      q1: "Baneberry",
+      q2: "9",
+      q3: "32"
+    };
+
+    const explanations = {
+    q1: {
+      en: "Baneberry is poisonous, while others are commonly edible.",
+      hi: "बेनबेरी विषैली होती है, जबकि अन्य खाने योग्य होती हैं।"
+    },
+    q2: {
+      en: "9 is the only odd number; others are even.",
+      hi: "9 एकमात्र विषम संख्या है; बाकी सब सम हैं।"
+    },
+    q3: {
+      en: "The sequence doubles each time: 2, 4, 8, 16, 32.",
+      hi: "श्रृंखला हर बार दोगुनी होती है: 2, 4, 8, 16, 32।"
+    }
+  };
+
+    let score = 0;
+    let attempted = 0;
+    let resultHTML = `<h2>Test Summary</h2>`;
+    resultHTML += `<p><strong>Total Questions:</strong> ${totalQuestions}</p>`;
+
+    for (let i = 1; i <= totalQuestions; i++) {
+      const qKey = `q${i}`;
+      const userAnswer = userAnswers[qKey] || "Not Answered";
+      const correct = correctAnswers[qKey];
+      const explanation = explanations[qKey];
+      const questionText = document.querySelector(`#q${i} p`).innerText;
+
+      if (userAnswers[qKey]) {
+        attempted++;
+        if (userAnswer === correct) score += 1;
+        else score -= 0.25;
+      }
+
+      resultHTML += `
+        <div style="margin-top:20px; padding:15px; border:1px solid #ccc; background:#fff;">
+          <strong>Q${i}:</strong> ${questionText}<br>
+          <strong>Your Answer:</strong> ${userAnswer}<br>
+          <strong>Correct Answer:</strong> ${correct}<br>
+          <strong>Explanation:</strong> ${explanation}
+        </div>
+      `;
+    }
+
+    resultHTML += `<p><strong>Attempted:</strong> ${attempted}</p>`;
+    resultHTML += `<p><strong>Final Score:</strong> ${score}</p>`;
+
+    document.getElementById("result").innerHTML = resultHTML;
+    document.getElementById("result").style.display = "block";
+    document.getElementById("result").scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    sidebar.classList.toggle('open');
+  }
+
+  document.getElementById("fullscreen-toggle").addEventListener("click", function () {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        this.textContent = "Exit Full Screen";
+      }).catch((err) => {
+        console.error("Failed to enter fullscreen:", err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        this.textContent = "Switch Full Screen";
+      }).catch((err) => {
+        console.error("Failed to exit fullscreen:", err);
+      });
+    }
+  });
+
+  document.addEventListener("fullscreenchange", () => {
+    const btn = document.getElementById("fullscreen-toggle");
+    if (!document.fullscreenElement) {
+      btn.textContent = "Switch Full Screen";
+    } else {
+      btn.textContent = "Exit Full Screen";
+    }
+  });
+  
+  // Ask user for fullscreen on load
+window.onload = function () {
+  Swal.fire({
+    title: 'Fullscreen Mode?',
+    text: 'Kya aap fullscreen mode mein jaana chahte hain?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes',
+    cancelButtonText: 'No',
+    customClass: {
+      confirmButton: 'swal2-confirm-green',
+      cancelButton: 'swal2-cancel-red'
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      document.documentElement.requestFullscreen();
+      document.getElementById("fullscreen-toggle").textContent = "Exit Full Screen";
+    }
+  });
+};
+
+// Custom button colors using CSS
+const style = document.createElement('style');
+style.textContent = `
+  .swal2-confirm-green {
+    background-color: green !important;
+  }
+  .swal2-cancel-red {
+    background-color: red !important;
+  }
+`;
+document.head.appendChild(style);
+
+//switch language-switch
+function switchLanguage() {
+  const lang = document.getElementById('language-switch').value;
+
+  // Change question text
+  document.querySelectorAll('.question-text').forEach(el => {
+    el.textContent = el.getAttribute(`data-${lang}`);
+  });
+
+  // Change options text
+  document.querySelectorAll('.options label').forEach(label => {
+    const text = label.getAttribute(`data-${lang}`);
+    const input = label.querySelector('input');
+    if (text && input) {
+      label.childNodes[1].nodeValue = " " + text;
+    }
+  });
+}
+
+
+
+</script>
+
+</body>
+</html>
